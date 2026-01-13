@@ -1,86 +1,131 @@
-# Hippocratic AI Coding Assignment – Bedtime Story Studio
+# Bedtime Story Studio
 
-This project implements a **research-informed, multi-agent bedtime story system (ages 5–10)** with an **LLM-as-a-Judge feedback loop**, **session/state/memory**, and **agent quality observability** (logs, traces, metrics).
+### A High-Fidelity Multi-Agent Framework for Research-Aligned Storytelling
 
-The goal is not just to generate a story, but to **reliably produce safe, calming, age-appropriate bedtime narratives** in an open-ended setting.
-
----
-
-## 1. Product framing
-
-Bedtime stories are part of a **sleep routine**, not a neutral creative task.  
-This system treats user prompts as **underspecified intent** and applies evidence-informed constraints to ensure:
-
-- low arousal and calming narrative arcs  
-- age-appropriate language and cognitive load  
-- predictable structure with clear closure  
-- ethical and cultural safety by default  
-
-These principles are enforced through a structured judge rubric.
+Bedtime Story Studio is a specialized agentic pipeline designed to bridge the gap between pediatric cognitive research and generative AI. Unlike monolithic LLM prompts, this framework employs a **Stateful Orchestration** model, **Hierarchical Rubrics**, and **Session-based Memory** to ensure content is safe, low-arousal, and developmentally appropriate.
 
 ---
 
-## 2. System design
+## Table of Contents
 
-### Multi-agent pipeline
+1. [Core Philosophy](https://www.google.com/search?q=%23core-philosophy)
+2. [System Architecture](https://www.google.com/search?q=%23system-architecture)
+3. [Technical Implementation](https://www.google.com/search?q=%23technical-implementation)
+* [Stateful Orchestration](https://www.google.com/search?q=%23stateful-orchestration)
+* [Hierarchical Evaluation](https://www.google.com/search?q=%23hierarchical-evaluation)
+* [Observability and Telemetry](https://www.google.com/search?q=%23observability-and-telemetry)
 
-- **Intent Interpreter** → converts the user prompt into a structured *Story Request Spec*  
-- **Planner** → generates a gentle story outline  
-- **Storyteller** → drafts the story  
-- **LLM Judge** → applies a rubric and returns structured JSON (pass/fail, flags, scores, revision instructions)  
-- **Reviser / Rewrite** → fixes issues and reduces arousal until the story passes or reaches a safe best-effort output  
-
-### Session, state, and memory (context engineering)
-
-Each run is a **session artifact** saved to `story_studio/sessions/<session_id>.json`, including:
-- request spec, plan, drafts, judge reports, and final story  
-- explicit state transitions (`INIT → … → FINALIZED`)
-
-Memory is deliberately minimal and controlled:
-- **Working memory**: per-session drafts and judge feedback  
-- **Opt-in preference memory**: saved only from explicit Human-in-the-Loop feedback (length, tone, recurring character)
+4. [Future Roadmap](https://www.google.com/search?q=%23future-roadmap)
+5. [Getting Started](https://www.google.com/search?q=%23getting-started)
 
 ---
 
-## 3. Agent quality & observability
+## Core Philosophy
 
-Quality assurance is built in via observability:
-- **Logs (diary)**: structured events (`story_studio/logs/events.jsonl`)  
-- **Traces (narrative)**: per-agent spans (interpreter, planner, judge, etc.)  
-- **Metrics (health report)**: latency, judge pass rates, score gauges  
+Generic LLMs often produce unpredictable results for children—excessive stimulation, poor structural closure, or subtle safety violations. This framework addresses these issues via:
 
-This enables continuous offline evaluation and iterative improvement.
-
----
-
-## 4. Judge rubric (overview)
-
-The LLM Judge enforces:
-- **Hard gates**: violence, threats, horror framing, sexual content, hate, etc.  
-- **Soft scores (0–10)**: age fit, coziness, low arousal, structure/closure, ethical & cultural safety, intent alignment  
-
-The judge always returns a single structured JSON object.
+* **Separation of Concerns**: Decoupling intent discovery, narrative planning, and creative execution.
+* **Deterministic Control**: Utilizing a Finite State Machine (FSM) to manage agent transitions.
+* **Research-to-Rubric**: Translating pediatric sleep hygiene and Self-Regulated Learning (SRL) principles into computable constraints.
 
 ---
 
-## 5. How to run
+## System Architecture
 
-```bash
-export OPENAI_API_KEY="..."
-python main.py
+The architecture is designed for controllability and high-trust output. It features a closed-loop "Judge-Reviser" cycle supported by a persistent memory layer.
+
+```mermaid
+graph LR
+    direction LR
+    
+    subgraph Context_Layer [State & Persistence]
+        Session[(Session Memory)] <--> FSM[State Machine]
+    end
+
+    subgraph Agent_Pipeline [Cognitive Nodes]
+        U(User) --> Interpreter[Interpreter]
+        Interpreter --> Planner[Planner]
+        Planner --> Storyteller[Storyteller]
+    end
+
+    subgraph Quality_Gate [Evaluation Tier]
+        direction TB
+        Storyteller --> Judge{LLM Judge}
+        Judge -- "Rewrite" --> Reviser[Reviser]
+        Reviser --> Judge
+    end
+
+    Session -.-> Interpreter
+    FSM --- Agent_Pipeline
+    Judge -- "Pass" --> Final((Output))
+
+    style Context_Layer fill:#f4f4f4,stroke:#666,stroke-dasharray: 5 5
+    style Quality_Layer fill:#fffcf5,stroke:#d4a017,stroke-width:2px
+
 ```
 
-Outputs:
-- Session artifacts: `story_studio/sessions/*.json`
-- Logs: `story_studio/logs/events.jsonl`
-- Preference memory: `story_studio/memory/user_prefs.json`
+---
+
+## Technical Implementation
+
+### Stateful Orchestration
+
+The system utilizes an explicit **Finite State Machine (FSM)**. Every session follows a governed lifecycle: `INIT` → `INTERPRETING` → `PLANNING` → `DRAFTING` → `JUDGING` → `FINALIZED`. This ensures:
+
+* **Error Resilience**: The system can retry or resume from specific failure points.
+* **Context Integrity**: Artifacts (Specs, Plans, Drafts) are persisted at each state transition.
+
+### Hierarchical Evaluation
+
+The **LLM-as-a-Judge** implementation uses a two-tier rubric:
+
+* **Hard Safety Gates**: Non-negotiable binary checks (e.g., violence, stereotypes).
+* **Soft Quality Scoring**: Multi-dimensional scoring (0-10) for **Low-Arousal**, **Age-Fit**, and **Narrative Closure**.
+
+### Observability and Telemetry
+
+Every session generates structured **Trace Logs**, enabling production-level monitoring:
+
+* **Latency Tracing**: Performance benchmarking for individual agent nodes.
+* **Convergence Rate**: Measuring the efficiency of the "Judge-Reviser" loop.
 
 ---
 
-## 6. From prototype to production
 
-Next steps beyond this assignment:
-- Offline evaluation sets with slice dashboards (topic, genre, risk)
-- Judge calibration with small HITL labels
-- Regression tests and red-teaming prompts
-- Optional MCP-style tool interface for safe external knowledge retrieval
+## Future Roadmap
+
+* **Consensus-Based Judging**: Implementing multi-model voting (e.g., GPT-4 + Claude) to mitigate single-LLM bias.
+* **Growth-Adaptive Memory**: Utilizing RAG to track a child's vocabulary development and adjust rubric difficulty.
+* **Adversarial Red-Teaming**: Specialized agents designed to stress-test safety gates with edge-case prompts.
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+* Python 3.9+
+* OpenAI API Key
+
+### Installation & Execution
+
+```bash
+# Clone the repository
+git clone https://github.com/haoqi-shen/Story_studio.git
+cd Story_studio
+
+# Configure Environment
+export OPENAI_API_KEY="your_api_key_here"
+
+# Run the Framework
+python main.py
+
+```
+
+### Output Artifacts
+
+The framework persists data in the following locations for auditing and observability:
+
+* **Session Data**: `story_studio/sessions/*.json` (Full state and trace data)
+* **Event Logs**: `story_studio/logs/events.jsonl` (Structured telemetry for monitoring)
+* **Preference Memory**: `story_studio/memory/user_prefs.json` (Long-term user profile)
