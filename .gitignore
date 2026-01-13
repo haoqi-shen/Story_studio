@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+
+# OS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Story Studio runtime artifacts
+story_studio/sessions/
+story_studio/logs/
+story_studio/memory/user_prefs.json
+
+# Temporary outputs
+*.log
+*.tmp
+
